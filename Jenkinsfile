@@ -7,36 +7,51 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
+        stage("Initial cleanup") {
             steps {
-                // Checkout code from the repository
-                checkout scm
+                dir("${WORKSPACE}") {
+                    deleteDir()
+                }
+            }
+        }
+
+        stage('SCM Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/melkamu372/tooling-containerization.git'
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 script {
-                    def branchName = env.BRANCH_NAME
-                    def imageTag = branchName == 'master' ? 'latest' : "${branchName}-latest"
-
-                    echo "Building Docker image with tag ${imageTag}"
-                    sh "docker build -t ${DOCKER_IMAGE_NAME}:${imageTag} ."
+                    def branchName = env.BRANCH_NAME ?: 'main'
+                    def sanitizedBranchName = branchName.replaceAll('/', '-').toLowerCase()
+                    def buildTag = "${sanitizedBranchName}-0.0.${env.BUILD_NUMBER}"
+                    def buildCommand = "docker build -t ${DOCKER_IMAGE_NAME}:${buildTag} ."
+                    
+                    bat buildCommand
                 }
             }
         }
 
-        stage('Push Docker Image') {
+        stage('Push Image') {
             steps {
                 script {
-                    def branchName = env.BRANCH_NAME
-                    def imageTag = branchName == 'master' ? 'latest' : "${branchName}-latest"
-
-                    echo "Pushing Docker image with tag ${imageTag}"
-                    docker.withRegistry('https://index.docker.io/v1/', DOCKER_CREDENTIALS_ID) {
-                        sh "docker push ${DOCKER_IMAGE_NAME}:${imageTag}"
+                    def branchName = env.BRANCH_NAME ?: 'main'
+                    def sanitizedBranchName = branchName.replaceAll('/', '-').toLowerCase()
+                    def buildTag = "${sanitizedBranchName}-0.0.${env.BUILD_NUMBER}"
+                    def imageNameWithTag = "${DOCKER_IMAGE_NAME}:${buildTag}"
+                    
+                    docker.withRegistry('https://registry.hub.docker.com', DOCKER_CREDENTIALS_ID) {
+                        docker.image(imageNameWithTag).push("${env.BUILD_NUMBER}")
                     }
                 }
+            }
+        }
+
+        stage('Cleanup') {
+            steps {
+                cleanWs(cleanWhenAborted: true, cleanWhenFailure: true, cleanWhenNotBuilt: true, cleanWhenUnstable: true, deleteDirs: true)
             }
         }
     }
