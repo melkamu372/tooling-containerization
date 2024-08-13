@@ -22,6 +22,19 @@ pipeline {
             }
         }
 
+        stage('Verify Files') {
+            steps {
+                script {
+                    echo "Current directory: ${pwd()}"
+                    if (isUnix()) {
+                        sh "ls -la"
+                    } else {
+                        bat "dir"
+                    }
+                }
+            }
+        }
+
         stage('Build and Start Containers') {
             steps {
                 script {
@@ -79,3 +92,4 @@ pipeline {
         }
     }
 }
+
