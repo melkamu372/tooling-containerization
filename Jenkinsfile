@@ -4,7 +4,7 @@ pipeline {
     environment {
         DOCKER_CREDENTIALS_ID = 'dockerhub-credentials'
         DOCKER_IMAGE_NAME = 'melkamu372/php-todo-app'
-        COMPOSE_FILE = 'tooling.yml'  // Specify the Docker Compose file
+        COMPOSE_FILE = "${WORKSPACE}\\tooling.yml"  // Specify the absolute path to the Docker Compose file
     }
 
     stages {
@@ -26,11 +26,9 @@ pipeline {
             steps {
                 script {
                     echo "Current directory: ${pwd()}"
-                    if (isUnix()) {
-                        sh "ls -la"
-                    } else {
-                        bat "dir"
-                    }
+                    echo "Listing files in workspace:"
+                    bat "dir ${WORKSPACE}"
+                    echo "Docker Compose file path: ${COMPOSE_FILE}"
                 }
             }
         }
@@ -39,7 +37,9 @@ pipeline {
             steps {
                 script {
                     // Pull any required images and start the containers
-                    def buildCommand = "docker-compose -f ${COMPOSE_FILE} up -d --build"
+                    def buildCommand = "docker-compose -f \"${COMPOSE_FILE}\" up -d --build"
+                    
+                    echo "Executing: ${buildCommand}"
                     
                     if (isUnix()) {
                         sh buildCommand
@@ -80,7 +80,7 @@ pipeline {
                 cleanWs(cleanWhenAborted: true, cleanWhenFailure: true, cleanWhenNotBuilt: true, cleanWhenUnstable: true, deleteDirs: true)
                 
                 script {
-                    def cleanupCommand = "docker-compose -f ${COMPOSE_FILE} down && docker rmi ${DOCKER_IMAGE_NAME}:0.0.${env.BUILD_NUMBER} || true"
+                    def cleanupCommand = "docker-compose -f \"${COMPOSE_FILE}\" down && docker rmi ${DOCKER_IMAGE_NAME}:0.0.${env.BUILD_NUMBER} || true"
                     
                     if (isUnix()) {
                         sh cleanupCommand
@@ -92,4 +92,3 @@ pipeline {
         }
     }
 }
-
