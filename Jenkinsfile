@@ -24,9 +24,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    def branchName = env.BRANCH_NAME ?: 'main'
-                    def sanitizedBranchName = branchName.replaceAll('/', '-').toLowerCase()
-                    def buildTag = "${sanitizedBranchName}-0.0.${env.BUILD_NUMBER}"
+                    def buildTag = "0.0.${env.BUILD_NUMBER}"
                     def buildCommand = "docker build -t ${DOCKER_IMAGE_NAME}:${buildTag} ."
                     
                     bat buildCommand
@@ -34,16 +32,26 @@ pipeline {
             }
         }
 
+        // stage('Smoke Test') {
+        //     steps {
+        //         script {
+        //             def httpEndpoint = "http://localhost:5000"  // Change to the actual endpoint of your service
+        //             def responseCode = sh(script: "curl -o /dev/null -s -w '%{http_code}' ${httpEndpoint}", returnStdout: true).trim()
+        //              if (responseCode != '200') {
+        //                 error "Expected status code 200 but got ${responseCode}"
+        //             }
+        //         }
+        //     }
+        // }
+
         stage('Push Image') {
             steps {
                 script {
-                    def branchName = env.BRANCH_NAME ?: 'main'
-                    def sanitizedBranchName = branchName.replaceAll('/', '-').toLowerCase()
-                    def buildTag = "${sanitizedBranchName}-0.0.${env.BUILD_NUMBER}"
+                    def buildTag = "0.0.${env.BUILD_NUMBER}"
                     def imageNameWithTag = "${DOCKER_IMAGE_NAME}:${buildTag}"
                     
                     docker.withRegistry('https://registry.hub.docker.com', DOCKER_CREDENTIALS_ID) {
-                        docker.image(imageNameWithTag).push("${env.BUILD_NUMBER}")
+                        docker.image(imageNameWithTag).push("${buildTag}")
                     }
                 }
             }
@@ -52,6 +60,11 @@ pipeline {
         stage('Cleanup') {
             steps {
                 cleanWs(cleanWhenAborted: true, cleanWhenFailure: true, cleanWhenNotBuilt: true, cleanWhenUnstable: true, deleteDirs: true)
+                
+                script {
+                    // Remove Docker images from Jenkins server
+                    sh "docker rmi ${DOCKER_IMAGE_NAME}:0.0.${env.BUILD_NUMBER} || true"
+                }
             }
         }
     }
