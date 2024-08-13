@@ -27,7 +27,11 @@ pipeline {
                     def buildTag = "0.0.${env.BUILD_NUMBER}"
                     def buildCommand = "docker build -t ${DOCKER_IMAGE_NAME}:${buildTag} ."
                     
-                    bat buildCommand
+                    if (isUnix()) {
+                        sh buildCommand
+                    } else {
+                        bat buildCommand
+                    }
                 }
             }
         }
@@ -37,7 +41,7 @@ pipeline {
         //         script {
         //             def httpEndpoint = "http://localhost:5000"  // Change to the actual endpoint of your service
         //             def responseCode = sh(script: "curl -o /dev/null -s -w '%{http_code}' ${httpEndpoint}", returnStdout: true).trim()
-        //              if (responseCode != '200') {
+        //             if (responseCode != '200') {
         //                 error "Expected status code 200 but got ${responseCode}"
         //             }
         //         }
@@ -62,8 +66,12 @@ pipeline {
                 cleanWs(cleanWhenAborted: true, cleanWhenFailure: true, cleanWhenNotBuilt: true, cleanWhenUnstable: true, deleteDirs: true)
                 
                 script {
-                    // Remove Docker images from Jenkins server
-                    sh "docker rmi ${DOCKER_IMAGE_NAME}:0.0.${env.BUILD_NUMBER} || true"
+                    def cleanupCommand = "docker rmi ${DOCKER_IMAGE_NAME}:0.0.${env.BUILD_NUMBER} || true"
+                    if (isUnix()) {
+                        sh cleanupCommand
+                    } else {
+                        bat cleanupCommand
+                    }
                 }
             }
         }
