@@ -1,112 +1,43 @@
 pipeline {
-  agent any
+    agent any
 
-      environment 
-    {
-        PROJECT     = 'tooling-prod'
-        ECRURL      = '059636857273.dkr.ecr.eu-central-1.amazonaws.com'
-        DEPLOY_TO = 'development'
+    environment {
+        DOCKER_CREDENTIALS_ID = 'dockerhub-credentials'
+        DOCKER_IMAGE_NAME = 'melkamu372/php-todo-app'
     }
 
-  stages {
-
-    stage("Initial cleanup") {
-        steps {
-        dir("${WORKSPACE}") {
-            deleteDir()
-        }
-        }
-    }
-
-    stage('Checkout')
-    {
-      steps {
-      checkout([
-        $class: 'GitSCM', 
-        doGenerateSubmoduleConfigurations: false, 
-        extensions: [],
-        submoduleCfg: [], 
-        // branches: [[name: '$branch']],
-        userRemoteConfigs: [[url: "https://github.com/StegTechHub/tooling.git ",credentialsId:'GITHUB_CREDENTIALS']] 	
-        ])
-        
-      }
+    stages {
+        stage('Checkout') {
+            steps {
+                // Checkout code from the repository
+                checkout scm
+            }
         }
 
-          stage('Build preparations')
-        {
-            steps
-            {
-                script 
-                {
-                    // calculate GIT lastest commit short-hash
-                    gitCommitHash = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
-                    shortCommitHash = gitCommitHash.take(7)
-                    // calculate a sample version tag
-                    VERSION = shortCommitHash
-                    // set the build display name
-                    currentBuild.displayName = "#${BUILD_ID}-${VERSION}"
-                    IMAGE = "$PROJECT:$VERSION"
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    def branchName = env.BRANCH_NAME
+                    def imageTag = branchName == 'master' ? 'latest' : "${branchName}-latest"
+
+                    echo "Building Docker image with tag ${imageTag}"
+                    sh "docker build -t ${DOCKER_IMAGE_NAME}:${imageTag} ."
                 }
             }
         }
 
-    stage('Build For Dev Environment') {
-               when {
-                expression { BRANCH_NAME ==~ /(dev)/ }
-            }
-        steps {
-            echo 'Build Dockerfile....'
-            script {
-                sh("eval \$(aws ecr get-login --no-include-email --region eu-central-1 | sed 's|https://||')") 
-                // sh "docker build --network=host -t $IMAGE -f deploy/docker/Dockerfile ."
-                sh "docker build --network=host -t $IMAGE ."
-                docker.withRegistry("https://$ECRURL"){
-                docker.image("$IMAGE").push("dev-$BUILD_NUMBER")
-            }
-            }
-        }
-      }
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    def branchName = env.BRANCH_NAME
+                    def imageTag = branchName == 'master' ? 'latest' : "${branchName}-latest"
 
-    stage('Build For Staging Environment') {
-               when {
-                expression { BRANCH_NAME ==~ /(staging|master)/ }
-            }
-        steps {
-            echo 'Build Dockerfile....'
-            script {
-                sh("eval \$(aws ecr get-login --no-include-email --region eu-central-1 | sed 's|https://||')")
-                sh "docker build --network=host -t $IMAGE ."
-                docker.withRegistry("https://$ECRURL"){
-                docker.image("$IMAGE").push("staging-$BUILD_NUMBER")
-            }
+                    echo "Pushing Docker image with tag ${imageTag}"
+                    docker.withRegistry('https://index.docker.io/v1/', DOCKER_CREDENTIALS_ID) {
+                        sh "docker push ${DOCKER_IMAGE_NAME}:${imageTag}"
+                    }
+                }
             }
         }
     }
-
-
-    stage('Build For Production Environment') {
-        when { tag "release-*" }
-        steps {
-            echo 'Build Dockerfile....'
-            script {
-                sh("eval \$(aws ecr get-login --no-include-email --region eu-central-1 | sed 's|https://||')") 
-                // sh "docker build --network=host -t $IMAGE -f deploy/docker/Dockerfile ."
-                sh "docker build --network=host -t $IMAGE ."
-                docker.withRegistry("https://$ECRURL"){
-                docker.image("$IMAGE").push("prod-$BUILD_NUMBER")
-            }
-            }
-        }
-    }
-
-    }
-
-        post
-    {
-        always
-        {
-            sh "docker rmi -f $IMAGE "
-        }
-    }
-} 
+}

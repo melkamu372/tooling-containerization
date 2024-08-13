@@ -1,5 +1,5 @@
 FROM php:7-apache
-MAINTAINER Tool Tooling
+
 
 RUN docker-php-ext-install mysqli
 COPY apache-config.conf /etc/apache2/sites-available/000-default.conf
