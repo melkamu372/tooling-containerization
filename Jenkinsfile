@@ -40,25 +40,13 @@ pipeline {
         stage('Build and Start Containers') {
             steps {
                 script {
-                    def buildTag = "0.0.${env.BUILD_NUMBER}"
-                    def imageNameWithTag = "${DOCKER_IMAGE_NAME}:${buildTag}"
-
-                    def buildCommand = "docker-compose -f \"${COMPOSE_FILE}\" build --no-cache --pull ${DOCKER_IMAGE_NAME}"
+                    def buildCommand = "docker-compose -f \"${COMPOSE_FILE}\" up -d --build"
                     echo "Executing: ${buildCommand}"
 
                     if (isUnix()) {
                         sh buildCommand
                     } else {
                         bat buildCommand
-                    }
-
-                    def startCommand = "docker-compose -f \"${COMPOSE_FILE}\" up -d"
-                    echo "Executing: ${startCommand}"
-
-                    if (isUnix()) {
-                        sh startCommand
-                    } else {
-                        bat startCommand
                     }
 
                     // List Docker images to confirm the image exists
@@ -74,8 +62,8 @@ pipeline {
         stage('Verify Image') {
             steps {
                 script {
-                    def buildTag = "0.0.${env.BUILD_NUMBER}"
-                    def imageNameWithTag = "${DOCKER_IMAGE_NAME}:${buildTag}"
+                    def imageTag = "0.0.${env.BUILD_NUMBER}"
+                    def imageNameWithTag = "${DOCKER_IMAGE_NAME}:${imageTag}"
 
                     echo "Verifying if the image exists locally: ${imageNameWithTag}"
 
