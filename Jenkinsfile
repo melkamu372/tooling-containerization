@@ -75,10 +75,7 @@ pipeline {
         stage('Smoke Test') {
             steps {
                 script {
-                    def httpEndpoint = "http://localhost:5000" // Change to the actual endpoint of your service
-
-                    // Uncomment the following lines to perform a smoke test
-                    /*
+                    def httpEndpoint = "http://localhost:5000" 
                     def responseCode = isUnix()
                         ? sh(script: "curl -o /dev/null -s -w '%{http_code}' ${httpEndpoint}", returnStdout: true).trim()
                         : bat(script: "curl -o nul -s -w %%{http_code} ${httpEndpoint}", returnStdout: true).trim()
@@ -88,11 +85,11 @@ pipeline {
                     if (responseCode != '200') {
                         error "Expected status code 200 but got ${responseCode}"
                     }
-                    */
+                    
                 }
             }
         }
-        
+
         stage('Tag and Push Image') {
             steps {
                 script {
