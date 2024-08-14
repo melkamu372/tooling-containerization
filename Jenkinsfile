@@ -18,7 +18,11 @@ pipeline {
 
         stage('SCM Checkout') {
             steps {
-                git branch: 'feature/push-image', url: 'https://github.com/melkamu372/tooling-containerization.git'
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: "${env.GIT_BRANCH}"]],
+                    userRemoteConfigs: [[url: 'https://github.com/melkamu372/tooling-containerization.git']]
+                ])
             }
         }
 
@@ -53,7 +57,8 @@ pipeline {
             steps {
                 script {
                     def httpEndpoint = "http://localhost:5000"  // Change to the actual endpoint of your service
-                    def responseCode = sh(script: "curl -o /dev/null -s -w '%{http_code}' ${httpEndpoint}", returnStdout: true).trim()
+                    def responseCode = isUnix() ? sh(script: "curl -o /dev/null -s -w '%{http_code}' ${httpEndpoint}", returnStdout: true).trim() : bat(script: "curl -o nul -s -w \"%{http_code}\" ${httpEndpoint}", returnStdout: true).trim()
+                    
                     if (responseCode != '200') {
                         error "Expected status code 200 but got ${responseCode}"
                     }
