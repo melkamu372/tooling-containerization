@@ -4,7 +4,7 @@ pipeline {
     environment {
         DOCKER_CREDENTIALS_ID = 'dockerhub-credentials'
         DOCKER_IMAGE_NAME = 'melkamu372/php-todo-app'
-        COMPOSE_FILE = "${WORKSPACE}/tooling.yml" // Specify the absolute path to the Docker Compose file
+        COMPOSE_FILE = "${WORKSPACE}/tooling.yml" // Path to Docker Compose file
     }
 
     stages {
@@ -98,15 +98,22 @@ pipeline {
 
         stage('Cleanup') {
             steps {
-                cleanWs(cleanWhenAborted: true, cleanWhenFailure: true, cleanWhenNotBuilt: true, cleanWhenUnstable: true, deleteDirs: true)
-
                 script {
-                    def cleanupCommand = "docker-compose -f \"${COMPOSE_FILE}\" down && docker rmi ${DOCKER_IMAGE_NAME}:0.0.${env.BUILD_NUMBER}"
+                    echo "Cleaning up Docker Compose setup and image"
 
+                    def cleanupCommand = "docker-compose -f \"${COMPOSE_FILE}\" down"
                     if (isUnix()) {
                         sh cleanupCommand
                     } else {
                         bat cleanupCommand
+                    }
+
+                    // Only attempt to remove the image if it exists
+                    def removeImageCommand = "docker rmi ${DOCKER_IMAGE_NAME}:0.0.${env.BUILD_NUMBER}"
+                    if (isUnix()) {
+                        sh removeImageCommand
+                    } else {
+                        bat removeImageCommand
                     }
                 }
             }
