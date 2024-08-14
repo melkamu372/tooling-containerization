@@ -56,24 +56,42 @@ pipeline {
         stage('Smoke Test') {
             steps {
                 script {
-                    def httpEndpoint = "http://localhost:5000"  // Change to the actual endpoint of your service
-                    //def responseCode = isUnix() ? sh(script: "curl -o /dev/null -s -w '%{http_code}' ${httpEndpoint}", returnStdout: true).trim() : bat(script: "curl -o nul -s -w \"%{http_code}\" ${httpEndpoint}", returnStdout: true).trim()
+                    def imageTag = "0.0.${env.BUILD_NUMBER}"
+                    def imageNameWithTag = "${DOCKER_IMAGE_NAME}:${imageTag}"
+
+                    echo "Verifying if the image exists locally: ${imageNameWithTag}"
                     
-                   // if (responseCode != '200') {
-                       // error "Expected status code 200 but got ${responseCode}"
-                   // }
+                    def images = sh(script: "docker images -q ${imageNameWithTag}", returnStdout: true).trim()
+                    
+                    if (images) {
+                        echo "Image found: ${imageNameWithTag}"
+                    } else {
+                        error "Image ${imageNameWithTag} not found. Build might have failed."
+                    }
                 }
             }
         }
 
-        stage('Push Image') {
+        stage('Tag and Push Image') {
             steps {
                 script {
                     def buildTag = "0.0.${env.BUILD_NUMBER}"
                     def imageNameWithTag = "${DOCKER_IMAGE_NAME}:${buildTag}"
+                    def dockerHubTag = "registry.hub.docker.com/${DOCKER_IMAGE_NAME}:${buildTag}"
+
+                    echo "Tagging image ${imageNameWithTag} as ${dockerHubTag}"
                     
+                    // Tag the image
+                    def tagCommand = "docker tag ${imageNameWithTag} ${dockerHubTag}"
+                    if (isUnix()) {
+                        sh tagCommand
+                    } else {
+                        bat tagCommand
+                    }
+
+                    // Push the image to Docker Hub
                     docker.withRegistry('https://registry.hub.docker.com', DOCKER_CREDENTIALS_ID) {
-                        docker.image(imageNameWithTag).push("${buildTag}")
+                        docker.image(dockerHubTag).push("${buildTag}")
                     }
                 }
             }
