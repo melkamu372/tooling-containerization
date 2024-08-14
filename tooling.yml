@@ -2,6 +2,7 @@ version: "3.9"
 services:
   tooling_frontend:
     build: .
+    image: melkamu372/php-todo-app:latest  # Use 'latest' or another static tag
     ports:
       - "5000:80"
     volumes:
