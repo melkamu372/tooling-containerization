@@ -4,11 +4,11 @@ pipeline {
     environment {
         DOCKER_CREDENTIALS_ID = 'dockerhub-credentials'
         DOCKER_IMAGE_NAME = 'melkamu372/php-todo-app'
-        COMPOSE_FILE = "${WORKSPACE}\\tooling.yml"  // Specify the absolute path to the Docker Compose file
+        COMPOSE_FILE = "${WORKSPACE}/tooling.yml" // Specify the absolute path to the Docker Compose file
     }
 
     stages {
-        stage("Initial cleanup") {
+        stage("Initial Cleanup") {
             steps {
                 dir("${WORKSPACE}") {
                     deleteDir()
@@ -41,7 +41,6 @@ pipeline {
             steps {
                 script {
                     def buildCommand = "docker-compose -f \"${COMPOSE_FILE}\" up -d --build"
-                    
                     echo "Executing: ${buildCommand}"
                     
                     if (isUnix()) {
@@ -52,46 +51,45 @@ pipeline {
                 }
             }
         }
-     
-stage('Verify Image') {
-    steps {
-        script {
-            def imageTag = "0.0.${env.BUILD_NUMBER}"
-            def imageNameWithTag = "${DOCKER_IMAGE_NAME}:${imageTag}"
 
-            echo "Verifying if the image exists locally: ${imageNameWithTag}"
-            
-            // Windows command for verifying image
-            def images = bat(script: "docker images -q ${imageNameWithTag}", returnStdout: true).trim()
-            
-            if (images) {
-                echo "Image found: ${imageNameWithTag}"
-            } else {
-                error "Image ${imageNameWithTag} not found. Build might have failed."
+        stage('Verify Image') {
+            steps {
+                script {
+                    def imageTag = "0.0.${env.BUILD_NUMBER}"
+                    def imageNameWithTag = "${DOCKER_IMAGE_NAME}:${imageTag}"
+
+                    echo "Verifying if the image exists locally: ${imageNameWithTag}"
+                    
+                    def images = isUnix()
+                        ? sh(script: "docker images -q ${imageNameWithTag}", returnStdout: true).trim()
+                        : bat(script: "docker images -q ${imageNameWithTag}", returnStdout: true).trim()
+                    
+                    if (images) {
+                        echo "Image found: ${imageNameWithTag}"
+                    } else {
+                        error "Image ${imageNameWithTag} not found. Build might have failed."
+                    }
+                }
             }
         }
-    }
-}
 
-stage('Smoke Test') {
-    steps {
-        script {
-            def httpEndpoint = "http://localhost:5000"  // Change to the actual endpoint of your service
+        stage('Smoke Test') {
+            steps {
+                script {
+                    def httpEndpoint = "http://localhost:5000" // Change to the actual endpoint of your service
 
-            // Use appropriate commands based on the OS
-            def responseCode = isUnix() 
-                ? sh(script: "curl -o /dev/null -s -w '%{http_code}' ${httpEndpoint}", returnStdout: true).trim()
-                : bat(script: "curl -o nul -s -w %%{http_code} ${httpEndpoint}", returnStdout: true).trim()
-            
-            echo "Response code: ${responseCode}"
+                    def responseCode = isUnix()
+                        ? sh(script: "curl -o /dev/null -s -w '%{http_code}' ${httpEndpoint}", returnStdout: true).trim()
+                        : bat(script: "curl -o nul -s -w %%{http_code} ${httpEndpoint}", returnStdout: true).trim()
+                    
+                    echo "Response code: ${responseCode}"
 
-            // Check if the response code is 200
-            if (responseCode != '200') {
-                error "Expected status code 200 but got ${responseCode}"
+                    if (responseCode != '200') {
+                        error "Expected status code 200 but got ${responseCode}"
+                    }
+                }
             }
         }
-    }
-}
 
         stage('Tag and Push Image') {
             steps {
@@ -102,7 +100,6 @@ stage('Smoke Test') {
 
                     echo "Tagging image ${imageNameWithTag} as ${dockerHubTag}"
                     
-                    // Tag the image
                     def tagCommand = "docker tag ${imageNameWithTag} ${dockerHubTag}"
                     if (isUnix()) {
                         sh tagCommand
@@ -110,7 +107,6 @@ stage('Smoke Test') {
                         bat tagCommand
                     }
 
-                    // Push the image to Docker Hub
                     docker.withRegistry('https://registry.hub.docker.com', DOCKER_CREDENTIALS_ID) {
                         docker.image(dockerHubTag).push("${buildTag}")
                     }
