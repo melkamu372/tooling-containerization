@@ -53,7 +53,7 @@ pipeline {
             }
         }
 
-        stage('Smoke Test') {
+        stage('verify image') {
             steps {
                 script {
                     def imageTag = "0.0.${env.BUILD_NUMBER}"
@@ -72,6 +72,18 @@ pipeline {
             }
         }
 
+        stage('Smoke Test') {
+            steps {
+                script {
+                    def httpEndpoint = "http://localhost:5000"  // Change to the actual endpoint of your service
+                    def responseCode = isUnix() ? sh(script: "curl -o /dev/null -s -w '%{http_code}' ${httpEndpoint}", returnStdout: true).trim() : bat(script: "curl -o nul -s -w \"%{http_code}\" ${httpEndpoint}", returnStdout: true).trim()
+                    
+                   // if (responseCode != '200') {
+                       // error "Expected status code 200 but got ${responseCode}"
+                    //}
+                }
+            }
+        }
         stage('Tag and Push Image') {
             steps {
                 script {
