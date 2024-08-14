@@ -26,6 +26,17 @@ pipeline {
             }
         }
 
+        stage('Verify Files') {
+            steps {
+                script {
+                    echo "Current directory: ${pwd()}"
+                    echo "Listing files in workspace:"
+                    bat "dir ${WORKSPACE}"
+                    echo "Docker Compose file path: ${COMPOSE_FILE}"
+                }
+            }
+        }
+
         stage('Build and Start Containers') {
             steps {
                 script {
@@ -90,7 +101,7 @@ pipeline {
                 cleanWs(cleanWhenAborted: true, cleanWhenFailure: true, cleanWhenNotBuilt: true, cleanWhenUnstable: true, deleteDirs: true)
 
                 script {
-                    def cleanupCommand = "docker-compose -f \"${COMPOSE_FILE}\" down && docker rmi ${DOCKER_IMAGE_NAME}:0.0.${env.BUILD_NUMBER} || true"
+                    def cleanupCommand = "docker-compose -f \"${COMPOSE_FILE}\" down && docker rmi ${DOCKER_IMAGE_NAME}:0.0.${env.BUILD_NUMBER}"
 
                     if (isUnix()) {
                         sh cleanupCommand
