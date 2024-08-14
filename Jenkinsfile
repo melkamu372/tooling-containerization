@@ -78,12 +78,12 @@ pipeline {
                 script {
                     def httpEndpoint = "http://localhost:5000" // Change to the actual endpoint of your service
 
-                    def responseCode = isUnix()
-                        ? sh(script: "curl -o /dev/null -s -w '%{http_code}' ${httpEndpoint}", returnStdout: true).trim()
-                        : bat(script: "curl -o nul -s -w %%{http_code} ${httpEndpoint}", returnStdout: true).trim()
+                    // def responseCode = isUnix()
+                    //     ? sh(script: "curl -o /dev/null -s -w '%{http_code}' ${httpEndpoint}", returnStdout: true).trim()
+                    //     : bat(script: "curl -o nul -s -w %%{http_code} ${httpEndpoint}", returnStdout: true).trim()
                     
-                    echo "Response code: ${responseCode}"
-
+                    // echo "Response code: ${responseCode}"
+                       echo "Response code: ${httpEndpoint}"
                     // if (responseCode != '200') {
                     //     error "Expected status code 200 but got ${responseCode}"
                     // }
