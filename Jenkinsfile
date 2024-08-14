@@ -18,7 +18,7 @@ pipeline {
 
         stage('SCM Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/melkamu372/tooling-containerization.git'
+                git branch: 'feature/push-image', url: 'https://github.com/melkamu372/tooling-containerization.git'
             }
         }
 
