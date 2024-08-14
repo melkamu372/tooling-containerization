@@ -93,7 +93,6 @@ stage('Smoke Test') {
     }
 }
 
- 
         stage('Tag and Push Image') {
             steps {
                 script {
