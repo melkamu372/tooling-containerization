@@ -8,7 +8,7 @@ pipeline {
     }
 
     stages {
-        stage("Initial Cleanup") {
+        stage('Initial Cleanup') {
             steps {
                 dir("${WORKSPACE}") {
                     deleteDir()
@@ -42,7 +42,7 @@ pipeline {
                 script {
                     def buildCommand = "docker-compose -f \"${COMPOSE_FILE}\" up -d --build"
                     echo "Executing: ${buildCommand}"
-                    
+
                     if (isUnix()) {
                         sh buildCommand
                     } else {
@@ -59,11 +59,11 @@ pipeline {
                     def imageNameWithTag = "${DOCKER_IMAGE_NAME}:${imageTag}"
 
                     echo "Verifying if the image exists locally: ${imageNameWithTag}"
-                    
+
                     def images = isUnix()
                         ? sh(script: "docker images -q ${imageNameWithTag}", returnStdout: true).trim()
                         : bat(script: "docker images -q ${imageNameWithTag}", returnStdout: true).trim()
-                    
+
                     if (images) {
                         echo "Image found: ${imageNameWithTag}"
                     } else {
@@ -81,9 +81,9 @@ pipeline {
                     // def responseCode = isUnix()
                     //     ? sh(script: "curl -o /dev/null -s -w '%{http_code}' ${httpEndpoint}", returnStdout: true).trim()
                     //     : bat(script: "curl -o nul -s -w %%{http_code} ${httpEndpoint}", returnStdout: true).trim()
-                    
-                    // echo "Response code: ${responseCode}"
-                       echo "Response code: ${httpEndpoint}"
+
+                     echo "Response code: ${httpEndpoint}"
+
                     // if (responseCode != '200') {
                     //     error "Expected status code 200 but got ${responseCode}"
                     // }
@@ -98,17 +98,29 @@ pipeline {
                     def imageNameWithTag = "${DOCKER_IMAGE_NAME}:${buildTag}"
                     def dockerHubTag = "registry.hub.docker.com/${DOCKER_IMAGE_NAME}:${buildTag}"
 
-                    echo "Tagging image ${imageNameWithTag} as ${dockerHubTag}"
-                    
-                    def tagCommand = "docker tag ${imageNameWithTag} ${dockerHubTag}"
-                    if (isUnix()) {
-                        sh tagCommand
-                    } else {
-                        bat tagCommand
-                    }
+                    echo "Verifying if the image exists locally: ${imageNameWithTag}"
 
-                    docker.withRegistry('https://registry.hub.docker.com', DOCKER_CREDENTIALS_ID) {
-                        docker.image(dockerHubTag).push("${buildTag}")
+                    def images = isUnix()
+                        ? sh(script: "docker images -q ${imageNameWithTag}", returnStdout: true).trim()
+                        : bat(script: "docker images -q ${imageNameWithTag}", returnStdout: true).trim()
+
+                    if (images) {
+                        echo "Image found: ${imageNameWithTag}"
+
+                        echo "Tagging image ${imageNameWithTag} as ${dockerHubTag}"
+
+                        def tagCommand = "docker tag ${imageNameWithTag} ${dockerHubTag}"
+                        if (isUnix()) {
+                            sh tagCommand
+                        } else {
+                            bat tagCommand
+                        }
+
+                        docker.withRegistry('https://registry.hub.docker.com', DOCKER_CREDENTIALS_ID) {
+                            docker.image(dockerHubTag).push("${buildTag}")
+                        }
+                    } else {
+                        error "Image ${imageNameWithTag} not found. Build might have failed."
                     }
                 }
             }
@@ -117,10 +129,10 @@ pipeline {
         stage('Cleanup') {
             steps {
                 cleanWs(cleanWhenAborted: true, cleanWhenFailure: true, cleanWhenNotBuilt: true, cleanWhenUnstable: true, deleteDirs: true)
-                
+
                 script {
                     def cleanupCommand = "docker-compose -f \"${COMPOSE_FILE}\" down && docker rmi ${DOCKER_IMAGE_NAME}:0.0.${env.BUILD_NUMBER} || true"
-                    
+
                     if (isUnix()) {
                         sh cleanupCommand
                     } else {
