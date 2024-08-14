@@ -36,7 +36,6 @@ pipeline {
         stage('Build and Start Containers') {
             steps {
                 script {
-                    // Pull any required images and start the containers
                     def buildCommand = "docker-compose -f \"${COMPOSE_FILE}\" up -d --build"
                     
                     echo "Executing: ${buildCommand}"
