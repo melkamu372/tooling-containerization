@@ -52,26 +52,29 @@ pipeline {
                 }
             }
         }
+     
+stage('Verify Image') {
+    steps {
+        script {
+            def imageTag = "0.0.${env.BUILD_NUMBER}"
+            def imageNameWithTag = "${DOCKER_IMAGE_NAME}:${imageTag}"
 
-        stage('verify image') {
-            steps {
-                script {
-                    def imageTag = "0.0.${env.BUILD_NUMBER}"
-                    def imageNameWithTag = "${DOCKER_IMAGE_NAME}:${imageTag}"
-
-                    echo "Verifying if the image exists locally: ${imageNameWithTag}"
-                    
-                    def images = sh(script: "docker images -q ${imageNameWithTag}", returnStdout: true).trim()
-                    
-                    if (images) {
-                        echo "Image found: ${imageNameWithTag}"
-                    } else {
-                        error "Image ${imageNameWithTag} not found. Build might have failed."
-                    }
-                }
+            echo "Verifying if the image exists locally: ${imageNameWithTag}"
+            
+            // Windows command for verifying image
+            def images = bat(script: "docker images -q ${imageNameWithTag}", returnStdout: true).trim()
+            
+            if (images) {
+                echo "Image found: ${imageNameWithTag}"
+            } else {
+                error "Image ${imageNameWithTag} not found. Build might have failed."
             }
         }
+    }
+}
 
+       
+ 
         stage('Smoke Test') {
             steps {
                 script {
