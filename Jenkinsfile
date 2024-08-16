@@ -45,6 +45,7 @@ pipeline {
         stage('Build and Start Containers') {
             steps {
                 script {
+                    
                     def buildCommand = "docker-compose -f \"${COMPOSE_FILE}\" up -d --build"
                     echo "Executing: ${buildCommand}"
 
@@ -54,30 +55,51 @@ pipeline {
                         bat buildCommand
                     }
 
-                    // Verify if the image exists with the latest tag
+                    def imagesList
+                    if (isUnix()) {
+                        imagesList = sh(script: "docker images", returnStdout: true).trim()
+                    } else {
+                        imagesList = bat(script: "docker images", returnStdout: true).trim()
+                    }
+                    echo "Docker Images:\n${imagesList}"
+
                     def latestTag = "${DOCKER_IMAGE_NAME}:latest"
                     def buildTag = "0.0.${env.BUILD_NUMBER}"
                     def imageNameWithTag = "${DOCKER_IMAGE_NAME}:${buildTag}"
 
-                    def latestImageId = isUnix()
-                        ? sh(script: "docker images -q ${latestTag}", returnStdout: true).trim()
-                        : bat(script: "docker images -q ${latestTag}", returnStdout: true).trim()
-
+                    def latestImageId
+                    if (isUnix()) {
+                        latestImageId = sh(script: "docker images -q ${latestTag}", returnStdout: true).trim()
+                    } else {
+                        latestImageId = bat(script: "docker images -q ${latestTag}", returnStdout: true).trim()
+                    }
                     echo "Checking for latest image ID: ${latestImageId}"
 
                     if (!latestImageId) {
                         error "Image ${latestTag} not found. Build might have failed."
                     }
 
-                    // Verify if the image exists with the versioned tag
-                    def imageId = isUnix()
-                        ? sh(script: "docker images -q ${imageNameWithTag}", returnStdout: true).trim()
-                        : bat(script: "docker images -q ${imageNameWithTag}", returnStdout: true).trim()
-
-                    if (imageId) {
-                        echo "Image ${imageNameWithTag} is present."
+                    def tagCommand = "docker tag ${latestTag} ${imageNameWithTag}"
+                    echo "Tagging image ${latestTag} as ${imageNameWithTag}"
+                    if (isUnix()) {
+                        sh tagCommand
                     } else {
+                        bat tagCommand
+                    }
+
+                    // Check for the versioned image ID
+                    def imageId
+                    if (isUnix()) {
+                        imageId = sh(script: "docker images -q ${imageNameWithTag}", returnStdout: true).trim()
+                    } else {
+                        imageId = bat(script: "docker images -q ${imageNameWithTag}", returnStdout: true).trim()
+                    }
+                    echo "Checking for versioned image ID: ${imageId}"
+
+                    if (!imageId) {
                         error "Image ${imageNameWithTag} not found. Build might have failed."
+                    } else {
+                        echo "Image ${imageNameWithTag} is present."
                     }
                 }
             }
