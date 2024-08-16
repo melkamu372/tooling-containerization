@@ -54,16 +54,22 @@ pipeline {
                         bat buildCommand
                     }
 
-                    // Verify if the image exists
+                    // Verify if the image exists with the latest tag
+                    def latestTag = "${DOCKER_IMAGE_NAME}:latest"
                     def buildTag = "0.0.${env.BUILD_NUMBER}"
                     def imageNameWithTag = "${DOCKER_IMAGE_NAME}:${buildTag}"
-                    def imagesList = isUnix()
-                        ? sh(script: "docker images", returnStdout: true).trim()
-                        : bat(script: "docker images", returnStdout: true).trim()
 
-                    echo "Docker Images:\n${imagesList}"
+                    def latestImageId = isUnix()
+                        ? sh(script: "docker images -q ${latestTag}", returnStdout: true).trim()
+                        : bat(script: "docker images -q ${latestTag}", returnStdout: true).trim()
 
-                    // Verify if the image exists with the tag
+                    echo "Checking for latest image ID: ${latestImageId}"
+
+                    if (!latestImageId) {
+                        error "Image ${latestTag} not found. Build might have failed."
+                    }
+
+                    // Verify if the image exists with the versioned tag
                     def imageId = isUnix()
                         ? sh(script: "docker images -q ${imageNameWithTag}", returnStdout: true).trim()
                         : bat(script: "docker images -q ${imageNameWithTag}", returnStdout: true).trim()
@@ -90,7 +96,6 @@ pipeline {
                     if (responseCode != '200') {
                         error "Expected status code 200 but got ${responseCode}"
                     }
-                    
                 }
             }
         }
@@ -100,11 +105,11 @@ pipeline {
                 script {
                     def buildTag = "0.0.${env.BUILD_NUMBER}"
                     def imageNameWithTag = "${DOCKER_IMAGE_NAME}:${buildTag}"
-                    def dockerHubTag = "registry.hub.docker.com/${DOCKER_IMAGE_NAME}:${buildTag}"
+                    def latestTag = "${DOCKER_IMAGE_NAME}:latest"
 
-                    echo "Tagging image ${DOCKER_IMAGE_NAME}:latest as ${imageNameWithTag}"
+                    echo "Tagging image ${latestTag} as ${imageNameWithTag}"
 
-                    def tagCommand = "docker tag ${DOCKER_IMAGE_NAME}:latest ${imageNameWithTag}"
+                    def tagCommand = "docker tag ${latestTag} ${imageNameWithTag}"
                     if (isUnix()) {
                         sh tagCommand
                     } else {
