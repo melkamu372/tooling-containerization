@@ -31,11 +31,16 @@ pipeline {
                 script {
                     echo "Current directory: ${pwd()}"
                     echo "Listing files in workspace:"
-                    bat "dir ${WORKSPACE}"
+                    if (isUnix()) {
+                        sh "ls -la ${WORKSPACE}"
+                    } else {
+                        bat "dir ${WORKSPACE}"
+                    }
                     echo "Docker Compose file path: ${COMPOSE_FILE}"
                 }
             }
         }
+
 
         stage('Build and Start Containers') {
             steps {
