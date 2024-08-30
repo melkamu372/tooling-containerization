@@ -8,3 +8,22 @@ This is a Dockerfile to build a debian based container image running nginx and p
 | Docker Tag | GitHub Release | Nginx Version | PHP Version | Debian Version |
 |-----|-------|-----|--------|--------|
 | latest | master Branch |1.17.2 | 7.3.8 | buster |
+
+
+
+### To Build docker Image build and run
+
+```
+docker-compose -f tooling.yml build
+```
+
+To run  the docker image 
+```
+docker-compose -f tooling.yml up
+
+```
+To stop docker
+
+```
+docker-compose -f tooling.yml down
+``` 

@@ -13,7 +13,7 @@ services:
     image: mysql:5.7
     restart: always
     environment:
-      MYSQL_DATABASE: tododb
+      MYSQL_DATABASE: tooling
       MYSQL_USER: todo_user
       MYSQL_PASSWORD: todo_pass
       MYSQL_RANDOM_ROOT_PASSWORD: '1'
